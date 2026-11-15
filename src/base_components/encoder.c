@@ -31,10 +31,13 @@ static void encoder_update(hal_gpio_pin_t pin, void *arg) {
             }
             return;
         }
-        if (a != b) {
-            encoder->pending = (a == 0) ? 1 : -1;
-        } else if (irq_one_low) {
+        if (irq_one_low) {
+            // the line that was low right after the first edge is the leading one; the current
+            // levels may already show the trailing line alone, which would look like the
+            // opposite direction
             encoder->pending = (irq_a == 0) ? 1 : -1;
+        } else if (a != b) {
+            encoder->pending = (a == 0) ? 1 : -1;
         } else {
             // both already low and nothing better known: keep turning the way we were
             encoder->pending = encoder->last_direction != 0 ? encoder->last_direction : 1;

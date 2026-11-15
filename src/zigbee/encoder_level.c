@@ -1,5 +1,6 @@
 #include "encoder_level.h"
 #include "consts.h"
+#include "hal/system.h"
 #include "hal/tasks.h"
 #include "hal/timer.h"
 #include "hal/zigbee.h"
@@ -10,14 +11,24 @@
  * (ENCODER_MIN_SEND_INTERVAL_MS) the ones in between are added up and go out together in the
  * next command, so nothing is lost and nothing waits for the knob to stop.
  */
-#ifndef ENCODER_STEP_SIZE
-#define ENCODER_STEP_SIZE                8   // level units per detent (254 = full range)
+/* Level units per detent (254 = full range), chosen by the time since the previous detent:
+ * slow turning gives fine steps, a quick flick crosses the whole range. */
+typedef struct {
+    uint16_t max_interval_ms; // detents closer than this ...
+    uint8_t  step;            // ... move the level by this much
+} encoder_speed_t;
+
+static const encoder_speed_t encoder_speeds[] = {
+    {  25, 45 },
+    {  50, 30 },
+    {  90, 18 },
+    { 150, 10 },
+};
+#ifndef ENCODER_SLOW_STEP_SIZE
+#define ENCODER_SLOW_STEP_SIZE           5
 #endif
-#ifndef ENCODER_FAST_STEP_SIZE
-#define ENCODER_FAST_STEP_SIZE           16  // per detent when turned fast
-#endif
-#ifndef ENCODER_FAST_MS
-#define ENCODER_FAST_MS                  45  // detents closer than this count as a fast turn
+#ifndef ENCODER_STAY_AWAKE_MS
+#define ENCODER_STAY_AWAKE_MS            3000 // no sleep while the knob is being turned
 #endif
 #ifndef ENCODER_MIN_SEND_INTERVAL_MS
 #define ENCODER_MIN_SEND_INTERVAL_MS     40
@@ -32,6 +43,7 @@ static int16_t                pending_units = 0;   // signed level units not sen
 static uint32_t               last_step_ms  = 0;
 static uint32_t               last_send_ms  = 0;
 static uint8_t                sent_once     = 0;
+static uint8_t                stepped_once  = 0;
 
 static void encoder_level_flush(void *arg) {
     if (pending_units == 0 || level_cluster == NULL) {
@@ -79,16 +91,27 @@ void encoder_level_init(zigbee_switch_cluster *cluster) {
 }
 
 void encoder_level_on_step(void *param, int8_t direction) {
-    uint32_t now  = hal_millis();
-    uint8_t  fast = sent_once && (now - last_step_ms) < ENCODER_FAST_MS;
+    uint32_t now      = hal_millis();
+    uint32_t interval = now - last_step_ms;
+    uint8_t  step     = ENCODER_SLOW_STEP_SIZE;
 
+    if (stepped_once) {
+        for (uint8_t i = 0; i < sizeof(encoder_speeds) / sizeof(encoder_speeds[0]); i++) {
+            if (interval < encoder_speeds[i].max_interval_ms) {
+                step = encoder_speeds[i].step;
+                break;
+            }
+        }
+    }
     last_step_ms = now;
+    stepped_once = 1;
+    hal_system_stay_awake(ENCODER_STAY_AWAKE_MS);
 
     // a change of direction drops what was still waiting for the other direction
     if ((direction > 0 && pending_units < 0) || (direction < 0 && pending_units > 0)) {
         pending_units = 0;
     }
-    pending_units += direction * (fast ? ENCODER_FAST_STEP_SIZE : ENCODER_STEP_SIZE);
+    pending_units += direction * step;
 
     uint32_t since_send = now - last_send_ms;
     if (!sent_once || since_send >= ENCODER_MIN_SEND_INTERVAL_MS) {

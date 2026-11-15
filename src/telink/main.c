@@ -20,6 +20,7 @@
 int real_main(startup_state_e state);
 
 extern uint8_t relay_clusters_cnt;
+bool telink_stay_awake(void); // hal/system.c
 
 // Battery powered remote: has a battery pin, or (end device builds) no relay to keep driven.
 static bool is_low_power_device(void) {
@@ -99,7 +100,7 @@ int real_main(startup_state_e state) {
         drv_wd_clear();
 
 #if PM_ENABLE
-        if (!tl_stackBusy() && zb_isTaskDone()) {
+        if (!tl_stackBusy() && zb_isTaskDone() && !telink_stay_awake()) {
             telink_gpio_hal_setup_wake_ups();
             // Only use deep retention for battery devices,
             // as it messes with GPIO output state, and relays cannot be
