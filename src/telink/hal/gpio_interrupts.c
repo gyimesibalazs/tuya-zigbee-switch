@@ -92,7 +92,16 @@ static void gpio_dispatch_handler(void *arg) {
 
 static u8 pause = 3;
 
+// input registers of all ports at the time of the last interrupt
+static volatile uint32_t irq_levels       = 0;
+static volatile uint8_t  irq_levels_fresh = 0;
+
 static void gpio_isr_callback(void) {
+    uint32_t levels = 0;
+
+    drv_gpio_read_all((uint8_t *)&levels);
+    irq_levels       = levels;
+    irq_levels_fresh = 1;
     // Schedule with small delay, and disable further IRQs until dispatched
     // So that constantly bouncing pins don't flood the system with interrupts
     hal_tasks_schedule(&gpio_dispatch_task, pause);
@@ -157,6 +166,18 @@ void hal_gpio_callback(hal_gpio_pin_t gpio_pin, gpio_callback_t callback,
     ensure_valid_edges();
 
     drv_gpio_irq_en((u32)gpio_pin);
+}
+
+uint8_t hal_gpio_irq_levels(hal_gpio_pin_t pin_a, hal_gpio_pin_t pin_b,
+                            uint8_t *level_a, uint8_t *level_b) {
+    if (!irq_levels_fresh) {
+        return 0;
+    }
+    uint32_t levels = irq_levels;
+    irq_levels_fresh = 0;
+    *level_a         = (levels & pin_to_mask(pin_a)) ? 1 : 0;
+    *level_b         = (levels & pin_to_mask(pin_b)) ? 1 : 0;
+    return 1;
 }
 
 void hal_gpio_unreg_callback(hal_gpio_pin_t gpio_pin) {

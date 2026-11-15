@@ -15,6 +15,8 @@
 #include <string.h>
 
 #include "base_components/led.h"
+#include "base_components/encoder.h"
+#include "zigbee/encoder_level.h"
 #include "base_components/network_indicator.h"
 #include "base_components/battery.h"
 #include "config_nv.h"
@@ -40,6 +42,9 @@ uint8_t leds_cnt = 0;
 
 button_t buttons[11];
 uint8_t  buttons_cnt = 0;
+
+encoder_t encoders[1];
+uint8_t   encoders_cnt = 0;
 
 relay_t relays[10]; // 4 relay endpoints + 3 cover endpoints
 uint8_t relays_cnt = 0;
@@ -287,6 +292,21 @@ void parse_config() {
         } else if (entry[0] == 'i') {
             uint32_t image_type = parse_int(entry + 1);
             hal_zigbee_set_image_type(image_type);
+        } else if (entry[0] == 'E') {
+            // Rotary encoder: E<pin A><pin B><pull>, e.g. ED4D7u. One per device.
+            // Turning so that pin A goes low first sends "brighter".
+            if (encoders_cnt < 1) {
+                hal_gpio_pin_t  pin_a = hal_gpio_parse_pin(entry + 1);
+                hal_gpio_pin_t  pin_b = hal_gpio_parse_pin(entry + 3);
+                hal_gpio_pull_t pull  = hal_gpio_parse_pull(entry + 5);
+
+                hal_gpio_init(pin_a, 1, pull);
+                hal_gpio_init(pin_b, 1, pull);
+                encoders[encoders_cnt].pin_a   = pin_a;
+                encoders[encoders_cnt].pin_b   = pin_b;
+                encoders[encoders_cnt].on_step = encoder_level_on_step;
+                encoders_cnt++;
+            }
         } else if (entry[0] == 'M') {
             for (int index = 0; index < switch_clusters_cnt; index++) {
                 switch_clusters[index].mode =
@@ -423,6 +443,11 @@ void peripherals_init() {
     }
     for (int index = 0; index < relays_cnt; index++) {
         relay_init(&relays[index]);
+    }
+    if (encoders_cnt > 0 && switch_clusters_cnt > 0) {
+        // the level commands go out from the endpoint of the first switch
+        encoder_level_init(&switch_clusters[0]);
+        encoder_init(&encoders[0]);
     }
     if (hal_zigbee_get_network_status() == HAL_ZIGBEE_NETWORK_JOINED) {
         network_indicator_connected(&network_indicator);

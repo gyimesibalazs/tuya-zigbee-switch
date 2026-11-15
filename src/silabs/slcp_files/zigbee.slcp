@@ -29,6 +29,8 @@ source:
 - {path: ../../hal/zigbee_ota.h}
 - {path: ../../hal/common/zigbee.h}
 - {path: ../../base_components/button.c}
+- {path: ../../base_components/encoder.c}
+- {path: ../../zigbee/encoder_level.c}
 - {path: ../../base_components/battery.c}
 - {path: ../../base_components/led.c}
 - {path: ../../base_components/network_indicator.c}

@@ -171,6 +171,11 @@ void hal_gpio_callback(hal_gpio_pin_t gpio_pin, gpio_callback_t callback,
 
 // (Optional) helper to unregister an interrupt if you add
 // hal_gpio_int_disable() later
+uint8_t hal_gpio_irq_levels(hal_gpio_pin_t pin_a, hal_gpio_pin_t pin_b,
+                            uint8_t *level_a, uint8_t *level_b) {
+    return 0; // no snapshot on this platform: callers use the current levels
+}
+
 void hal_gpio_unreg_callback(hal_gpio_pin_t gpio_pin) {
     printf("hal_gpio_unreg_callback pin %02X\r\n", gpio_pin);
 

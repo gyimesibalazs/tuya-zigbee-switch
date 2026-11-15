@@ -70,6 +70,11 @@ void hal_gpio_callback(hal_gpio_pin_t gpio_pin, gpio_callback_t callback,
     io_log("GPIO", "Set callback for pin %d", gpio_pin);
 }
 
+uint8_t hal_gpio_irq_levels(hal_gpio_pin_t pin_a, hal_gpio_pin_t pin_b,
+                            uint8_t *level_a, uint8_t *level_b) {
+    return 0; // no snapshot on this platform: callers use the current levels
+}
+
 void hal_gpio_unreg_callback(hal_gpio_pin_t gpio_pin) {
     ensure_valid_output_pin(gpio_pin);
 

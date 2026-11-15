@@ -19,6 +19,17 @@
 
 int real_main(startup_state_e state);
 
+extern uint8_t relay_clusters_cnt;
+
+// Battery powered remote: has a battery pin, or (end device builds) no relay to keep driven.
+static bool is_low_power_device(void) {
+#ifdef ZB_ED_ROLE
+    return battery.pin != HAL_INVALID_PIN || relay_clusters_cnt == 0;
+#else
+    return battery.pin != HAL_INVALID_PIN;
+#endif
+}
+
 static _attribute_ram_code_sec_ bool is_bootloader_mode(void) {
     // Check if we are in bootloader mode by reading the flag
     return(*((u32 *)(BOOTLOADER_MODE_MAIN_ADDR + FLASH_TLNK_FLAG_OFFSET)) ==
@@ -67,7 +78,7 @@ int real_main(startup_state_e state) {
     }
 #endif
 
-    if (battery.pin != HAL_INVALID_PIN && !g_tx_power_stored) {
+    if (is_low_power_device() && !g_tx_power_stored) {
         // Use lower TX power if battery powered, unless the user chose a value
         g_tx_power_dbm = 3;
         hal_zigbee_set_tx_power(g_tx_power_dbm);
@@ -93,7 +104,7 @@ int real_main(startup_state_e state) {
             // Only use deep retention for battery devices,
             // as it messes with GPIO output state, and relays cannot be
             // driven via PULL-ups, it may cause issues.
-            if (battery.pin != HAL_INVALID_PIN) {
+            if (is_low_power_device()) {
                 telink_gpio_to_pull_for_deep_retention();
                 drv_pm_lowPowerEnter();
                 // If we didn't actually enter deep retention, restore GPIO

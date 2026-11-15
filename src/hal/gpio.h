@@ -81,6 +81,15 @@ void hal_gpio_callback(hal_gpio_pin_t gpio_pin, gpio_callback_t callback,
 void hal_gpio_unreg_callback(hal_gpio_pin_t gpio_pin);
 
 /**
+ * Levels of two pins as they were inside the last GPIO interrupt, right after the edge that
+ * raised it (the callbacks run later, when the lines may have changed again).
+ * @return 1 if the levels come from an interrupt that was not reported yet, 0 if there is no
+ *         such snapshot (then *level_a and *level_b are left unchanged)
+ */
+uint8_t hal_gpio_irq_levels(hal_gpio_pin_t pin_a, hal_gpio_pin_t pin_b,
+                            uint8_t *level_a, uint8_t *level_b);
+
+/**
  * Parse pin string ("A5", "B10") to pin identifier
  * @param s Pin string (e.g., "A5", "B10")
  * @return Pin identifier or HAL_INVALID_PIN
