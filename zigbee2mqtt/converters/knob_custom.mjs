@@ -14,6 +14,7 @@ export default [
         model: "TS004F-knob",
         vendor: "Custom devices (DiY)",
         description: "Rotary knob with custom firmware: one command per detent",
+        ota: true,
         // battery: firmware built with a battery pin (config entry BT<pin>)
         extend: [
             m.commandsOnOff(),
