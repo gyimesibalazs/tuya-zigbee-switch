@@ -360,6 +360,11 @@ static bool hal_zigbee_poll_rate_supported(void) {
            node_type == SL_ZIGBEE_S2S_TARGET_DEVICE;
 }
 
+void hal_zigbee_set_tx_power(int8_t dbm) {
+    // Not implemented for Silicon Labs yet: the stack keeps its own transmit power.
+    (void)dbm;
+}
+
 void hal_zigbee_set_poll_rate_ms(uint32_t poll_rate_ms) {
     if (!hal_zigbee_poll_rate_supported()) {
         return;

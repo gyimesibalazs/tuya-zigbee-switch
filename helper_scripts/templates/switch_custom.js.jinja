@@ -174,6 +174,19 @@ const romasku = {
             access: "ALL",
             entityCategory: "config",
         }),
+    txPower: (name, endpointName) =>
+        numeric({
+            name,
+            endpointNames: [endpointName],
+            cluster: "genBasic",
+            attribute: { ID: 0xff04, type: 0x28 }, // int8
+            description: "Radio transmit power (firmware with adjustable power only)",
+            unit: "dBm",
+            valueMin: -25,
+            valueMax: 10,
+            valueStep: 1,
+            entityCategory: "config",
+        }),
     multiPressResetCount: (name, endpointName) =>
         numeric({
             name,
@@ -454,6 +467,7 @@ const definitions = [
             {% set first_endpoint = device.switchNames[0] if device.switchNames else (device.relayNames[0] if device.relayNames else (device.coverSwitchNames[0] if device.coverSwitchNames else device.coverNames[0])) %}
             romasku.deviceConfig("device_config", "{{first_endpoint}}"),
             romasku.multiPressResetCount("multi_press_reset_count", "{{first_endpoint}}"),
+            romasku.txPower("tx_power", "{{first_endpoint}}"),
             {% if device.has_dedicated_net_led %}
             romasku.networkIndicator("network_led", "{{first_endpoint}}"),
             {% endif%}

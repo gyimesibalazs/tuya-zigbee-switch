@@ -193,6 +193,12 @@ void hal_zigbee_register_on_zcl_activity_callback(
  */
 void hal_zigbee_set_poll_rate_ms(uint32_t poll_rate_ms);
 
+/**
+ * Set the radio transmit power in dBm. The nearest level the radio has, not below the request,
+ * is used. Can be called before the stack is started; the value is then applied at start.
+ */
+void hal_zigbee_set_tx_power(int8_t dbm);
+
 /** Get current end device poll rate in milliseconds
  *
  * Returns 0 for routers.

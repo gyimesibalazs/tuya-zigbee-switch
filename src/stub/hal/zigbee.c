@@ -137,6 +137,10 @@ void hal_zigbee_register_on_zcl_activity_callback(
     io_log("ZIGBEE", "Registered ZCL activity callback");
 }
 
+void hal_zigbee_set_tx_power(int8_t dbm) {
+    io_log("ZIGBEE", "Set TX power to %d dBm", (int)dbm);
+}
+
 void hal_zigbee_set_poll_rate_ms(uint32_t new_poll_rate_ms) {
     poll_rate_ms = new_poll_rate_ms;
     io_log("ZIGBEE", "Set poll rate to %u ms", (unsigned)new_poll_rate_ms);

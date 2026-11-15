@@ -10,6 +10,7 @@
 #include "telink_size_t_hack.h"
 
 #include "device_config/config_parser.h"
+#include "device_config/device_params_nv.h"
 
 #include "app.h"
 #include "hal/gpio.h"
@@ -66,9 +67,10 @@ int real_main(startup_state_e state) {
     }
 #endif
 
-    if (battery.pin != HAL_INVALID_PIN) {
-        // Use lower TX power if battery powered
-        g_zb_txPowerSet = RF_POWER_INDEX_P3p01dBm;
+    if (battery.pin != HAL_INVALID_PIN && !g_tx_power_stored) {
+        // Use lower TX power if battery powered, unless the user chose a value
+        g_tx_power_dbm = 3;
+        hal_zigbee_set_tx_power(g_tx_power_dbm);
     }
 
     drv_wd_setInterval(1000);

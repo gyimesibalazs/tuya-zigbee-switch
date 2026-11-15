@@ -168,6 +168,12 @@ void hal_zigbee_leave_network(void) {
 }
 
 void hal_zigbee_start_network_steering(void) {
+    if (!zb_isDeviceFactoryNew()) {
+        // Already part of a network and only out of reach for now: the stack rejoins by itself.
+        // For such a device BDB steering does not join anything, it broadcasts
+        // Mgmt_Permit_Joining_req and opens the whole network for 180 seconds.
+        return;
+    }
     printf("Starting network steering\r\n");
     u8 res = bdb_networkSteerStart();
     if (res == 0) {
@@ -184,6 +190,32 @@ hal_zigbee_status_t hal_zigbee_send_announce(void) {
     return HAL_ZIGBEE_OK;
 }
 
+/* RF_POWER_INDEX_* of the TLSR8258 in 0.1 dBm, index 0 = strongest */
+static const s16 tx_power_table[] = {
+    105, 103, 100, 98,   95,   92,   90,   87,   84,   81,
+    78,  74,  70,  66,   61,   57,   51,   46,   39,   32,
+    30,  28,  26,  24,   20,   17,   15,   12,   9,    6,
+    0,   -1,  -10, -14,  -19,  -25,  -30,  -36,  -43,  -50,
+    -58, -67, -77, -87,  -99,  -114, -133, -159, -193, -252
+};
+#define TX_POWER_TABLE_SIZE    (sizeof(tx_power_table) / sizeof(tx_power_table[0]))
+
+static bool radio_started = 0;
+
+void hal_zigbee_set_tx_power(int8_t dbm) {
+    s16 want = (s16)dbm * 10;
+    u8  idx  = TX_POWER_TABLE_SIZE - 1;
+
+    // weakest level that is not below the request
+    while (idx > 0 && tx_power_table[idx] < want) {
+        idx--;
+    }
+    g_zb_txPowerSet = idx; // used whenever the stack sets up the radio
+    if (radio_started) {
+        rf_setTxPower(idx);
+    }
+}
+
 void hal_zigbee_set_poll_rate_ms(uint32_t poll_rate_ms) {
     zb_setPollRate(poll_rate_ms);
 }
@@ -196,6 +228,7 @@ uint32_t hal_zigbee_get_poll_rate_ms(void) {
 
 void telink_zigbee_hal_network_init(void) {
     zb_init();
+    radio_started = 1;
     zb_zdoCbRegister(&zdo_callbacks);
     af_powerDescPowerModeUpdate(POWER_MODE_RECEIVER_COMES_PERIODICALLY);
 }
