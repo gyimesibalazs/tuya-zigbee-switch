@@ -41,3 +41,7 @@ void hal_zigbee_set_image_type(uint16_t image_type) {
     // This can be probably hacked in, but it requires patching their SDK
     // internals so it's out of scope for now
 }
+
+uint8_t hal_zigbee_ota_in_progress(void) {
+    return 0;
+}

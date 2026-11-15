@@ -12,4 +12,7 @@ void hal_ota_cluster_setup(hal_zigbee_cluster *cluster);
 /** Initialize over-the-air firmware update functionality */
 void hal_zigbee_init_ota();
 
+/** @return 1 while a firmware image is being downloaded */
+uint8_t hal_zigbee_ota_in_progress(void);
+
 #endif

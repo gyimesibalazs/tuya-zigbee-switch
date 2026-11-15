@@ -9,6 +9,7 @@
 #include "hal/printf_selector.h"
 #include "hal/timer.h"
 #include "hal/zigbee.h"
+#include "hal/zigbee_ota.h"
 
 // Battery device defaults (ZCL spec)
 // All values in quarter-seconds
@@ -25,6 +26,10 @@
 #define NON_BATTERY_FAST_POLL_TIMEOUT      (10 * 4)   // 10 seconds
 
 #define QS_TO_MS(qs)    ((uint32_t)(qs) * 250)
+
+#ifndef OTA_POLL_RATE_MS
+#define OTA_POLL_RATE_MS    100
+#endif
 
 static const uint16_t poll_ctrl_cluster_revision = 0x01;
 
@@ -334,6 +339,13 @@ void poll_control_cluster_update(void) {
     uint32_t expected_poll_rate_ms =
         cluster->in_fast_poll ? QS_TO_MS(cluster->short_poll_interval)
                               : QS_TO_MS(cluster->long_poll_interval);
+    if (hal_zigbee_ota_in_progress()) {
+        // A block of the image only arrives with a poll, and the next block is requested as soon
+        // as the previous one is in: the poll rate is the download speed. Without this the
+        // download ran at the short poll interval (2 blocks per second) and dropped to the long
+        // poll interval (minutes per block) whenever the fast poll period ran out.
+        expected_poll_rate_ms = OTA_POLL_RATE_MS;
+    }
     if (hal_zigbee_get_poll_rate_ms() != expected_poll_rate_ms) {
         hal_zigbee_set_poll_rate_ms(expected_poll_rate_ms);
     }

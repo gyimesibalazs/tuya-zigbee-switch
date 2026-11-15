@@ -51,6 +51,10 @@ void hal_zigbee_init_ota() {
              &ota_preamble, &ota_callback);
 }
 
+uint8_t hal_zigbee_ota_in_progress(void) {
+    return zcl_attr_imageUpgradeStatus == IMAGE_UPGRADE_STATUS_DOWNLOAD_IN_PROGRESS;
+}
+
 void hal_zigbee_set_image_type(uint16_t image_type) {
     ota_preamble.imageType = image_type;
 }
