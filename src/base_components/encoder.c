@@ -14,6 +14,8 @@ static void encoder_step(encoder_t *encoder, int8_t direction) {
     }
 }
 
+#define ENCODER_DIRECTION_UNKNOWN    2
+
 static void encoder_update(hal_gpio_pin_t pin, void *arg) {
     encoder_t *encoder = (encoder_t *)arg;
     uint8_t    a       = hal_gpio_read(encoder->pin_a);
@@ -31,33 +33,47 @@ static void encoder_update(hal_gpio_pin_t pin, void *arg) {
             }
             return;
         }
+        encoder->uncertain     = 0;
+        encoder->seen_both_low = (!a && !b);
         if (irq_one_low) {
             // the line that was low right after the first edge is the leading one; the current
             // levels may already show the trailing line alone, which would look like the
             // opposite direction
             encoder->pending = (irq_a == 0) ? 1 : -1;
         } else if (a != b) {
-            encoder->pending = (a == 0) ? 1 : -1;
+            // No interrupt levels: the device was asleep and the edge only woke it up. The line
+            // that is low alone is the leading one, unless the wake-up took so long that the
+            // leading line is already back high. Decided by what comes next.
+            encoder->pending   = (a == 0) ? 1 : -1;
+            encoder->uncertain = !fresh;
         } else {
-            // both already low and nothing better known: keep turning the way we were
-            encoder->pending = encoder->last_direction != 0 ? encoder->last_direction : 1;
+            // both already low: the line that goes back high first is the leading one
+            encoder->pending = ENCODER_DIRECTION_UNKNOWN;
         }
-        encoder->seen_both_low = (!a && !b);
         return;
     }
 
     if ((!a && !b) || (fresh && !irq_a && !irq_b)) {
         encoder->seen_both_low = 1;
     }
+    if (encoder->pending == ENCODER_DIRECTION_UNKNOWN && a != b) {
+        encoder->pending = a ? 1 : -1;
+    }
     if (a && b) {
-        // Back at rest: a detent only if both lines were low on the way, otherwise the knob
-        // was turned back before the detent (or one contact bounced).
         int8_t direction = encoder->pending;
         encoder->pending = 0;
-        if (encoder->seen_both_low) {
+        if (direction == ENCODER_DIRECTION_UNKNOWN) {
+            // never saw the lines apart: keep turning the way we were
+            encoder_step(encoder, encoder->last_direction != 0 ? encoder->last_direction : 1);
+        } else if (encoder->seen_both_low) {
             encoder_step(encoder, direction);
+        } else if (encoder->uncertain) {
+            // woke up late: what we saw low alone was the trailing line of a finished detent
+            encoder_step(encoder, -direction);
         }
+        // otherwise the knob was turned back before the detent, or one contact bounced
         encoder->seen_both_low = 0;
+        encoder->uncertain     = 0;
     }
 }
 
@@ -69,6 +85,7 @@ void encoder_init(encoder_t *encoder) {
     encoder->pending        = 0;
     encoder->last_direction = 0;
     encoder->seen_both_low  = 0;
+    encoder->uncertain      = 0;
     hal_gpio_callback(encoder->pin_a, encoder_update, encoder);
     hal_gpio_callback(encoder->pin_b, encoder_ignore, encoder);
 }

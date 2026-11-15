@@ -17,6 +17,7 @@ typedef struct {
     int8_t             pending;        // direction of the cycle in progress, 0 = at rest
     int8_t             last_direction;
     uint8_t            seen_both_low;
+    uint8_t            uncertain;      // direction guessed without the interrupt levels
 } encoder_t;
 
 void encoder_init(encoder_t *encoder);
