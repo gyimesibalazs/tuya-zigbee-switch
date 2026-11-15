@@ -15,6 +15,23 @@ export default [
         vendor: "Custom devices (DiY)",
         description: "Rotary knob with custom firmware: one command per detent",
         // battery: firmware built with a battery pin (config entry BT<pin>)
-        extend: [m.commandsOnOff(), m.commandsLevelCtrl(), m.battery({voltage: true})],
+        extend: [
+            m.commandsOnOff(),
+            m.commandsLevelCtrl(),
+            m.battery({voltage: true}),
+            // Basic cluster, custom attribute 0xff04 (int8): radio transmit power.
+            // The knob sleeps: turn it while changing the value, so that it is awake to take it.
+            m.numeric({
+                name: "tx_power",
+                unit: "dBm",
+                cluster: "genBasic",
+                attribute: {ID: 0xff04, type: 0x28},
+                valueMin: -25,
+                valueMax: 10,
+                valueStep: 1,
+                description: "Radio transmit power (default 3 dBm). Turn the knob while changing it.",
+                entityCategory: "config",
+            }),
+        ],
     },
 ];
